@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  llamie-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: llamie-telegram-bot
+    restart: unless-stopped
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - OLLAMIE_TOKEN=${OLLAMIE_TOKEN}
+      - OLLAMA_MODEL=gpt-oss:120b
+    volumes:
+      - ./logs:/app/logs
+      - ./.env:/app/.env:ro
+    networks:
+      - llamie-network
+    depends_on:
+      - ollama
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: llamie-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - llamie-network
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    # Uncomment if you have NVIDIA GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # Optional: Web UI for Ollama
+  ollama-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: llamie-ollama-webui
+    restart: unless-stopped
+    ports:
+      - "3000:8080"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_SECRET_KEY=your-secret-key-here
+    volumes:
+      - ollama-webui-data:/app/backend/data
+    networks:
+      - llamie-network
+    depends_on:
+      - ollama
+
+networks:
+  llamie-network:
+    driver: bridge
+
+volumes:
+  ollama-data:
+    driver: local
+  ollama-webui-data:
+    driver: local

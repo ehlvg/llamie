@@ -23,12 +23,25 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-OLLAMA_MODEL = "gpt-oss:120b"
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gpt-oss:120b")
 SYSTEM_PROMPT = 'You are chatting in a messaging app. Your name is Anfisa. You respond shortly, with no formatting, elaboration, extra fluff, tables, just an SMS-like one-two paragraph (maximum) responses. Be casual, natural, you can include a bit of emojis sometimes.'
-ollama_client = AsyncClient(host='https://ollama.com', headers={'Authorization': '' + os.getenv("OLLAMIE_TOKEN")})
+
+# Check if running in Docker (use internal ollama service) or external
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://ollama:11434")
+OLLAMA_TOKEN = os.getenv("OLLAMIE_TOKEN", "")
+
+# Configure Ollama client based on environment
+if OLLAMA_TOKEN:
+    # External Ollama service with authentication
+    ollama_client = AsyncClient(host='https://ollama.com', headers={'Authorization': OLLAMA_TOKEN})
+    logger.info("Using external Ollama service with authentication")
+else:
+    # Local Ollama service (Docker or local installation)
+    ollama_client = AsyncClient(host=OLLAMA_HOST)
+    logger.info(f"Using local Ollama service at {OLLAMA_HOST}")
 
 logger.info(f"Starting Llamie Bot with model: {OLLAMA_MODEL}")
-logger.info(f"Ollama token configured: {'Yes' if os.getenv('OLLAMIE_TOKEN') else 'No'}")
+logger.info(f"Ollama token configured: {'Yes' if OLLAMA_TOKEN else 'No'}")
 
 if not BOT_TOKEN:
     logger.error("BOT_TOKEN environment variable is not set")
